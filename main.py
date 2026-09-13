@@ -9,7 +9,7 @@ load_dotenv()
 
 #Initialisng variables
 DATA_PATH = "data/master_stock_data.csv"
-TICKERS_TO_ANALYSE = []
+TICKERS_TO_ANALYSE = ["META", "AMZN", "AAPL", "NFLX", "GOOGL"] #Using FAANG tickers (although FB is now Meta)
 ROLLING_WINDOW_DAYS = 30
 
 #Loading and cleaning stock database
@@ -45,4 +45,52 @@ def plot_price_and_volatility(df: pd.DataFrame):
     axes[1].legend()
 
     plt.tight_layout()
+    
+#Creating a summary of data to send to the LLM - can't read dataframes
+def build_summary(df: pd.DataFrame) -> str:
+    lines = [] #List of summaries per ticker
+    for ticker, group in df.groupby("ticker"): 
+        avg_return = group["daily_return"].mean()
+        avg_vol = group["rolling_volatity"].mean()
+        lines.append(
+            f"{ticker}: average daily return = {avg_return}, "
+            f"average {ROLLING_WINDOW_DAYS}-day rolling volatility = {avg_vol}:.4%"
+        ) #Adds strings to 'lines' where decimals are diplayed as percentages to 4dp
+    return "/n".join(lines) #Glues items in 'lines' together
+
+#Calling Gemini
+def ask_gemini_about_data(question: str, summary: str) -> str:
+    genai.Client(api_key=os.environ["GEMINI_API_KEY"]) #Looks up value from .env
+    prompt = f"""You are a data analyst assistant. Here is a summary of a stock dataset:
         
+    {summary}
+        
+    Answer this question about the data as clearly and consisely as possible,
+    referencing the actual numbers when relevant:
+            
+    {question}
+    """
+    
+    response = client.models.generate_content( #API call
+        model="gemini-2.5-flash",
+        contents=prompt,
+    )
+    return response.text #Extracts the generated answer as a string
+
+#The main execution block
+if __name__ == "__main__": #Standard python convention - only runs if file is run directly not if functions were imported
+    df = load_data(DATA_PATH)
+    df = filter_tickers(df, TICKERS_TO_ANALYSE)
+    
+    print(df.head())
+    
+    plot_price_and_volatility(df)
+    
+    summary = build_summary(df)
+    print("\nSummary stats:\n", summary)
+    
+    question = "Which stock had the highest volatility, and what might explain that?"
+    answer = ask_gemini_about_data(question, summary)
+
+    print(f"/nQuestion: {question}")
+    print(f"Answer: {answer}")
