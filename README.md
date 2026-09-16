@@ -16,7 +16,7 @@ This project explores volatility patterns across a handful of major stocks (FAAN
 
 ## Example output
 
-*!\[Price and volatility chart](price\_and\_volatility.png)*
+![Price and volatility chart](price_and_volatility.png)
 
 ## Tech stack
 
