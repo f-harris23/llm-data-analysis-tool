@@ -35,10 +35,10 @@ This project explores volatility patterns across a handful of major stocks (FAAN
 2. Create a `.env` file in the project root with your Gemini API key:
 
 ```
-   GEMINI\_API\_KEY=your-key-here
+   GEMINI_API_KEY=your-key-here
    ```
 
-3. Place your dataset CSV in a `data/` folder and update `DATA\_PATH` in `main.py` if needed.
+3. Place your dataset CSV in a `data` folder and update `DATA_PATH` in `main.py` if needed.
 4. Run the script:
 
 ```bash
