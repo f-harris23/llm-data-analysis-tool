@@ -31,12 +31,24 @@ def filter_tickers(df: pd.DataFrame, tickers: list[str]):
         print(f"Note: these tickers weren't found in the dataset and will be skipped: {missing}")
     return df[df["ticker"].isin(tickers)].copy() #Dataframe with list of available tickers for analysis
 
+#Creating a new column
+def add_returns_and_volatility(df: pd.DataFrame, window: int) -> pd.DataFrame:
+    df = df.copy() #Makes sure we are not modifying the original dataframe
+    df["daily_return"] = df.groupby("ticker")["close"].pct_change() #New column for percentage change
+    df["rolling_volatility"] = (
+        df.groupby("ticker")["daily_return"]
+        .rolling(window=window)
+        .std() #Standard deviation - definition of volativity
+        .reset_index(level=0, drop=True) #Lining up the result with the original dataframe
+    )
+    return df
+
 #Plotting 
 def plot_price_and_volatility(df: pd.DataFrame):
-    fig, axes = plt.subplot(2, 1, figsize=(10, 8), sharex=True) #Figure with 2 rows 1 column of subplots, both charts share x axis
+    fig, axes = plt.subplots(2, 1, figsize=(10, 8), sharex=True) #Figure with 2 rows 1 column of subplots, both charts share x axis
     
     for ticker, group in df.groupby("ticker"): 
-        axes[0].plot(group["date"], group["close"], labels=ticker)
+        axes[0].plot(group["date"], group["close"], label=ticker)
         axes[1].plot(group["date"], group["rolling_volatility"], label=ticker)
         
     axes[0].set_title("Closing price over time")
@@ -45,22 +57,23 @@ def plot_price_and_volatility(df: pd.DataFrame):
     axes[1].legend()
 
     plt.tight_layout()
+    plt.savefig("price_and_volatility.png")
     
 #Creating a summary of data to send to the LLM - can't read dataframes
 def build_summary(df: pd.DataFrame) -> str:
     lines = [] #List of summaries per ticker
     for ticker, group in df.groupby("ticker"): 
         avg_return = group["daily_return"].mean()
-        avg_vol = group["rolling_volatity"].mean()
+        avg_vol = group["rolling_volatility"].mean()
         lines.append(
-            f"{ticker}: average daily return = {avg_return}, "
-            f"average {ROLLING_WINDOW_DAYS}-day rolling volatility = {avg_vol}:.4%"
+            f"{ticker}: average daily return = {avg_return:.4%}, "
+            f"average {ROLLING_WINDOW_DAYS}-day rolling volatility = {avg_vol:.4%}"
         ) #Adds strings to 'lines' where decimals are diplayed as percentages to 4dp
-    return "/n".join(lines) #Glues items in 'lines' together
+    return "\n".join(lines) #Glues items in 'lines' together
 
 #Calling Gemini
 def ask_gemini_about_data(question: str, summary: str) -> str:
-    genai.Client(api_key=os.environ["GEMINI_API_KEY"]) #Looks up value from .env
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"]) #Looks up value from .env
     prompt = f"""You are a data analyst assistant. Here is a summary of a stock dataset:
         
     {summary}
@@ -72,7 +85,7 @@ def ask_gemini_about_data(question: str, summary: str) -> str:
     """
     
     response = client.models.generate_content( #API call
-        model="gemini-2.5-flash",
+        model="gemini-3.6-flash",
         contents=prompt,
     )
     return response.text #Extracts the generated answer as a string
@@ -81,6 +94,7 @@ def ask_gemini_about_data(question: str, summary: str) -> str:
 if __name__ == "__main__": #Standard python convention - only runs if file is run directly not if functions were imported
     df = load_data(DATA_PATH)
     df = filter_tickers(df, TICKERS_TO_ANALYSE)
+    df = add_returns_and_volatility(df, ROLLING_WINDOW_DAYS)
     
     print(df.head())
     
@@ -92,5 +106,5 @@ if __name__ == "__main__": #Standard python convention - only runs if file is ru
     question = "Which stock had the highest volatility, and what might explain that?"
     answer = ask_gemini_about_data(question, summary)
 
-    print(f"/nQuestion: {question}")
+    print(f"\nQuestion: {question}")
     print(f"Answer: {answer}")
