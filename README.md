@@ -10,11 +10,12 @@ This project explores volatility patterns across a handful of major stocks (FAAN
 
  
 **Python pipeline (`main.py`)**
-- **Data loading and cleaning** — reads a large historical S&P 500 price dataset, normalises column names, and parses dates
-- **Ticker filtering** — narrows the dataset to a chosen set of stocks (currently META, AMZN, AAPL, NFLX, GOOGL)
-- **Returns and volatility calculation** — computes daily percentage returns and 30-day rolling volatility (standard deviation of returns) per ticker
-- **Visualisation** — plots closing price and rolling volatility over time for all selected tickers
-- **LLM-assisted Q&A** — summarises the computed statistics and sends them to Google's Gemini API to answer plain-English questions about the data (e.g. "which stock had the highest volatility, and what might explain that?")
+- **Data loading and cleaning**: reads a large historical S&P 500 price dataset, normalises column names, and parses dates
+- **Ticker filtering**: narrows the dataset to a chosen set of stocks (currently META, AMZN, AAPL, NFLX, GOOGL)
+- **Returns and volatility calculation**: computes daily percentage returns and 30-day rolling volatility (standard deviation of returns) per ticker
+- **Visualisation**: plots closing price and rolling volatility over time for all selected tickers
+- **LLM-assisted Q&A**: summarises the computed statistics and sends them to Google's Gemini API to answer plain-English questions about the data (e.g. "which stock had the highest volatility, and what might explain that?")
+
 **SQL pipeline (`analysis.sql`)**
 - The same returns and rolling volatility analysis, rebuilt entirely in SQL and run on Snowflake
 - Uses window functions (`LAG`, `STDDEV` with a rolling frame) to compute daily returns and 30-day rolling volatility per ticker
